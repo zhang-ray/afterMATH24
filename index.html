@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Math24</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,sans-serif;background:#0f0c29;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:12px;user-select:none}
+h1{font-size:22px;margin-bottom:2px}
+.sub{font-size:12px;color:#a29bfe;margin-bottom:10px}
+.bar{width:100%;max-width:360px;height:5px;background:#222;border-radius:3px;margin-bottom:8px}
+.bar-fill{height:100%;background:#6c5ce7;border-radius:3px;transition:width .1s}
+.stats{display:flex;gap:16px;font-size:12px;color:#a29bfe;margin-bottom:12px}
+.stats b{color:#fff}
+.cards{display:flex;gap:8px;margin-bottom:14px}
+.card{width:58px;height:80px;background:#fff;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#2d3436;box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer;transition:transform .1s}
+.card:active{transform:scale(.93)}
+.card.used{opacity:.2;pointer-events:none}
+.card.red{color:#e74c3c}
+.card small{font-size:9px;color:#a29bfe}
+.expr{width:100%;max-width:360px;min-height:38px;background:rgba(255,255,255,.08);border-radius:8px;padding:8px;font-size:20px;text-align:center;margin-bottom:10px}
+.ops{display:flex;gap:6px;margin-bottom:10px}
+.op{width:42px;height:42px;border-radius:50%;border:2px solid #6c5ce7;background:0 0;color:#a29bfe;font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.op:active{background:#6c5ce7;color:#fff}
+.acts{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;justify-content:center}
+.btn{padding:8px 14px;border-radius:16px;border:none;font-size:13px;font-weight:700;cursor:pointer}
+.p{background:#6c5ce7;color:#fff}.s{background:rgba(255,255,255,.1);color:#a29bfe}.d{background:#e74c3c;color:#fff}
+.hint{font-size:10px;color:#636e72;margin-top:4px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:10}
+.modal{background:#1a1a2e;border-radius:16px;padding:28px;text-align:center;width:85%;max-width:300px}
+.modal h2{font-size:20px;margin:8px 0}
+.modal p{font-size:13px;color:#a29bfe;line-height:1.7;margin-bottom:14px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<h1>🃏 Math24</h1>
+<div class="sub">Use + − × ÷ to make 24 from 4 cards</div>
+<div class="bar"><div class="bar-fill" id="bar" style="width:100%"></div></div>
+<div class="stats"><div>Score <b id="sc">0</b></div><div>Combo <b id="st">0</b></div><div>⏱ <b id="tl">60</b>s</div></div>
+<div class="cards" id="ca"></div>
+<div class="expr" id="ex">Tap cards & operators</div>
+<div class="ops">
+<button class="op" onclick="aO('+')">+</button>
+<button class="op" onclick="aO('-')">−</button>
+<button class="op" onclick="aO('*')">×</button>
+<button class="op" onclick="aO('/')">÷</button>
+<button class="op" onclick="aO('(')">(</button>
+<button class="op" onclick="aO(')')">)</button>
+</div>
+<div class="acts">
+<button class="btn s" onclick="cl()">Clear</button>
+<button class="btn s" onclick="un()">Undo</button>
+<button class="btn p" onclick="su()">=24?</button>
+<button class="btn d" onclick="sk()">Skip</button>
+<button class="btn s" onclick="hi()">💡</button>
+</div>
+<div class="hint">A=1 J=11 Q=12 K=13 · Must use all 4 cards</div>
+<div class="overlay hidden" id="ov"><div class="modal">
+<div style="font-size:48px" id="re">🎉</div>
+<h2 id="rt">Score: 0</h2>
+<p id="rd"></p>
+<button class="btn p" onclick="go()" style="width:100%">Play Again 🔄</button>
+<button class="btn s" onclick="sh()" style="width:100%;margin-top:6px">Share 💬</button>
+</div></div>
+<script>
+const tg=window.Telegram&&window.Telegram.WebApp;if(tg){tg.ready();tg.expand()}
+const O=['+','-','*','/'],D=['','A','2','3','4','5','6','7','8','9','10','J','Q','K']
+function c(a,o,b){if(o==='+')return a+b;if(o==='-')return a-b;if(o==='*')return a*b;if(o==='/')return b!==0&&Math.abs(a/b-Math.round(a/b))<1e-4?a/b:null;return null}
+function P(a){if(a.length<=1)return[a];const r=[];for(let i=0;i<a.length;i++){const t=[...a.slice(0,i),...a.slice(i+1)];for(const p of P(t))r.push([a[i],...p])}return r}
+function S(n){const s=new Set;for(const[a,b,c_,d]of P(n))for(const o1 of O)for(const o2 of O)for(const o3 of O){const t=(v,e)=>{if(Math.abs(v-24)<1e-4)s.add(e)};let r,q,w;r=c(a,o1,b);if(r!==null){q=c(r,o2,c_);if(q!==null){w=c(q,o3,d);if(w!==null)t(w,`((${a}${o1}${b})${o2}${c_})${o3}${d}`)}}r=c(b,o2,c_);if(r!==null){q=c(a,o1,r);if(q!==null){w=c(q,o3,d);if(w!==null)t(w,`(${a}${o1}(${b}${o2}${c_}))${o3}${d}`)}}r=c(a,o1,b);q=c(c_,o3,d);if(r!==null&&q!==null){w=c(r,o2,q);if(w!==null)t(w,`(${a}${o1}${b})${o2}(${c_}${o3}${d})`)}r=c(b,o2,c_);if(r!==null){q=c(r,o3,d);if(q!==null){w=c(a,o1,q);if(w!==null)t(w,`${a}${o1}((${b}${o2}${c_})${o3}${d})`)}}r=c(c_,o3,d);if(r!==null){q=c(b,o2,r);if(q!==null){w=c(a,o1,q);if(w!==null)t(w,`${a}${o1}(${b}${o2}(${c_}${o3}${d}))`)}}}return[...s]}
+function G(){let k,s;do{k=[1,2,3,4].map(()=>Math.floor(Math.random()*13)+1);s=S(k)}while(!s.length);return{cards:k,solutions:s}}
+let pz,ex=[],uc=new Set,sc=0,st=0,tl=60,ps=0,pk=0,fb='',ft
+function rC(){const a=document.getElementById('ca');a.innerHTML='';pz.cards.forEach((v,i)=>{const d=document.createElement('div');d.className=`card${uc.has(i)?' used':''}${v===1||v>=11?' red':''}`;d.innerHTML=D[v]+(v>10||v===1?`<small>=${v}</small>`:'');d.onclick=()=>aC(i);a.appendChild(d)})}
+function rE(){const e=document.getElementById('ex');if(!ex.length){e.textContent='Tap cards & operators';e.style.opacity='.4'}else{e.textContent=ex.map(x=>x.t==='c'?D[x.v]:x.v==='*'?'×':x.v==='/'?'÷':x.v).join(' ');e.style.opacity='1'}}
+function rS(){document.getElementById('sc').textContent=sc;document.getElementById('st').textContent=st;document.getElementById('tl').textContent=tl;document.getElementById('bar').style.width=(tl/60*100)+'%'}
+function aC(i){if(uc.has(i))return;uc.add(i);ex.push({t:'c',v:pz.cards[i],i});rC();rE()}
+function aO(o){ex.push({t:'o',v:o});rE()}
+function cl(){ex=[];uc=new Set;rC();rE()}
+function un(){const l=ex.pop();if(l&&l.t==='c')uc.delete(l.i);rC();rE()}
+function sf(t,d){fb=t;const e=document.getElementById('ex');e.textContent=t;e.style.opacity='1';clearTimeout(ft);ft=setTimeout(()=>{fb='';rE()},d||800)}
+function hi(){if(pz&&pz.solutions.length)sf('💡 '+pz.solutions[0].replace(/\*/g,'×').replace(/\//g,'÷'),2500)}
+function su(){if(!ex.length)return;if(ex.filter(e=>e.t==='c').length!==4){sf('⚠️ Use all 4 cards');return}const s=ex.map(e=>e.t==='c'?e.v:e.v).join('');try{const r=Function(`"use strict";return(${s})`)();if(Math.abs(r-24)<1e-4){st++;const b=Math.min(st,5);sc+=100*b;ps++;sf(`✅ +${100*b}`);np()}else{st=0;sf('❌ ='+r.toFixed(1))}}catch(e){sf('⚠️ Invalid')}rS()}
+function sk(){st=0;pk++;sf('⏭');np();rS()}
+function np(){pz=G();ex=[];uc=new Set;rC();setTimeout(rE,800)}
+function go(){document.getElementById('ov').classList.add('hidden');sc=0;st=0;tl=60;ps=0;pk=0;pz=G();ex=[];uc=new Set;rC();rE();rS()}
+function er(){const o=document.getElementById('ov');document.getElementById('re').textContent=ps>=10?'🏆':ps>=5?'🎉':ps>=1?'👍':'💪';document.getElementById('rt').textContent=`Score: ${sc}`;document.getElementById('rd').innerHTML=`Solved <b>${ps}</b> · Skipped ${pk}<br>Avg ${ps>0?(60/ps).toFixed(1):'—'}s per puzzle`;o.classList.remove('hidden')}
+function sh(){const t=`🃏 Math24 | Score ${sc} | Solved ${ps}`;if(tg)tg.sendData(JSON.stringify({sc,ps,pk}));else if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>alert('Copied!'))}
+go();setInterval(()=>{if(document.getElementById('ov').classList.contains('hidden')){tl--;rS();if(tl<=0)er()}},1000)
+</script>
+</body>
+</html>
